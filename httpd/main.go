@@ -3,11 +3,14 @@ package main
 import (
 	"NewsFeeder/httpd/handler"
 	"NewsFeeder/platform/newsfeed"
+	"database/sql"
 	"github.com/gin-gonic/gin"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {
-	feed := newsfeed.New()
+	db, _ := sql.Open("sqlite3", "./newsfeed.db")
+	feed := newsfeed.New(db)
 	r := gin.Default()
 	r.GET("/ping", handler.PingGet())
 	r.GET("/newsfeed", handler.NewsfeedGet(feed))

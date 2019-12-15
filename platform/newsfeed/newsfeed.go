@@ -1,7 +1,9 @@
 package newsfeed
 
+import "database/sql"
+
 type Getter interface {
-	Getall() []Item
+	GetAll() []Item
 }
 
 type Adder interface {
@@ -9,24 +11,52 @@ type Adder interface {
 }
 
 type Item struct {
+	ID    int    `json:"id"`
 	Title string `json:"title"`
 	Post  string `json:"post"`
 }
 
 type Repo struct {
-	Items []Item
+	DB *sql.DB
 }
 
-func New() *Repo {
+func New(db *sql.DB) *Repo {
+	stmt, _ := db.Prepare(`
+	CREATE TABLE IF NOT EXISTS "newsfeed" (
+	"id"	INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	"title" VARCHAR(255),
+	"post"	TEXT
+	);`)
+	stmt.Exec()
+
 	return &Repo{
-		Items: []Item{},
+		DB: db,
 	}
 }
 
 func (r *Repo) Add(item Item) {
-	r.Items = append(r.Items, item)
+	stmt, _ := r.DB.Prepare(`
+	INSERT INTO newsfeed (title, post) VALUES (?,?);
+	`)
+	stmt.Exec(item.Title, item.Post)
 }
 
 func (r *Repo) GetAll() []Item {
-	return r.Items
+	items := []Item{}
+	rows, _ := r.DB.Query(`SELECT * FROM newsfeed;`)
+	var id int
+	var title string
+	var post string
+
+	for rows.Next() {
+		rows.Scan(&id, &title, &post)
+		item := Item{
+			ID:    id,
+			Title: title,
+			Post:  post,
+		}
+		items = append(items, item)
+	}
+
+	return items
 }
